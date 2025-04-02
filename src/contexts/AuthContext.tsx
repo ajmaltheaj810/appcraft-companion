@@ -11,6 +11,8 @@ interface AuthContextType {
   logout: () => void;
   register: (username: string, email: string, password: string) => void;
   requestPasswordReset: (email: string) => void;
+  verifyResetToken: (token: string, email: string) => boolean;
+  resetPassword: (token: string, email: string, newPassword: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,15 +25,44 @@ export const useAuth = () => {
   return context;
 };
 
+// Store reset tokens with expiration time
+interface ResetToken {
+  token: string;
+  email: string;
+  expiresAt: number; // timestamp
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
+
+  // Load reset tokens from localStorage
+  const getResetTokens = (): ResetToken[] => {
+    const tokensString = localStorage.getItem('todomaster-reset-tokens');
+    if (tokensString) {
+      return JSON.parse(tokensString);
+    }
+    return [];
+  };
+
+  // Save reset tokens to localStorage
+  const saveResetTokens = (tokens: ResetToken[]) => {
+    localStorage.setItem('todomaster-reset-tokens', JSON.stringify(tokens));
+  };
 
   useEffect(() => {
     // Check if user is logged in from local storage
     const storedUser = localStorage.getItem('todomaster-user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    }
+    
+    // Clean up expired reset tokens
+    const tokens = getResetTokens();
+    const now = Date.now();
+    const validTokens = tokens.filter(token => token.expiresAt > now);
+    if (validTokens.length !== tokens.length) {
+      saveResetTokens(validTokens);
     }
   }, []);
 
@@ -113,16 +144,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const users = JSON.parse(localStorage.getItem('todomaster-users') || '[]');
     const userExists = users.some((u: any) => u.email === email);
     
-    // Only send the email if the user exists (but don't tell the user if it exists or not for security)
+    // Only send the email if the user exists
     if (userExists) {
-      // Generate a "reset token" (in a real app, this would be a secure token stored in a database)
+      // Generate a reset token (in a real app, this would be a secure token stored in a database)
       const resetToken = Math.random().toString(36).substring(2, 15);
       
-      // Send password reset email
+      // Store the token in localStorage with expiration (1 hour)
+      const tokens = getResetTokens();
+      const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour from now
+      
+      // Remove any existing tokens for this email
+      const filteredTokens = tokens.filter(token => token.email !== email);
+      filteredTokens.push({ token: resetToken, email, expiresAt });
+      saveResetTokens(filteredTokens);
+      
+      // Create a reset link that includes the token and email
+      const resetLink = `${window.location.origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+      
+      // Send password reset email with actual link
       sendEmail(
         email,
         "Reset your TodoMaster password",
-        `Hello,\n\nWe received a request to reset your TodoMaster password. Use the following link to reset it:\n\n${window.location.origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}\n\nIf you didn't request this, you can safely ignore this email.`
+        `Hello,\n\nWe received a request to reset your TodoMaster password. Click on the following link to reset it:\n\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this, you can safely ignore this email.`
       );
     }
     
@@ -130,6 +173,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast('Password reset email sent', { 
       description: 'If an account with that email exists, you will receive instructions to reset your password.' 
     });
+  };
+
+  const verifyResetToken = (token: string, email: string): boolean => {
+    const tokens = getResetTokens();
+    const tokenData = tokens.find(t => t.token === token && t.email === email);
+    
+    if (!tokenData) {
+      return false;
+    }
+    
+    // Check if token is expired
+    if (tokenData.expiresAt < Date.now()) {
+      // Remove expired token
+      const filteredTokens = tokens.filter(t => t.token !== token || t.email !== email);
+      saveResetTokens(filteredTokens);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const resetPassword = (token: string, email: string, newPassword: string): boolean => {
+    // Verify token is valid
+    if (!verifyResetToken(token, email)) {
+      return false;
+    }
+    
+    // Update user's password
+    const users = JSON.parse(localStorage.getItem('todomaster-users') || '[]');
+    const userIndex = users.findIndex((u: any) => u.email === email);
+    
+    if (userIndex === -1) {
+      return false;
+    }
+    
+    users[userIndex].password = newPassword;
+    localStorage.setItem('todomaster-users', JSON.stringify(users));
+    
+    // Remove the used token
+    const tokens = getResetTokens();
+    const filteredTokens = tokens.filter(t => t.token !== token || t.email !== email);
+    saveResetTokens(filteredTokens);
+    
+    // Send password change confirmation email
+    sendEmail(
+      email,
+      "Your TodoMaster password has been reset",
+      `Hello,\n\nYour TodoMaster password has been successfully reset. If you did not make this change, please contact our support team immediately.`
+    );
+    
+    return true;
   };
 
   const logout = () => {
@@ -146,7 +240,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       logout, 
       register, 
-      requestPasswordReset 
+      requestPasswordReset,
+      verifyResetToken,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>
