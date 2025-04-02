@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => void;
   logout: () => void;
   register: (username: string, email: string, password: string) => void;
+  requestPasswordReset: (email: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Simulate sending an email
+  const sendEmail = (to: string, subject: string, body: string) => {
+    // In a real app, this would be an API call to your email service
+    console.log(`Sending email to: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body: ${body}`);
+    
+    // For demonstration purposes, we'll show a toast
+    toast(`Email sent to ${to}`, {
+      description: subject,
+    });
+  };
+
   const login = (email: string, password: string) => {
     // In a real app, you would validate against a backend
     const users = JSON.parse(localStorage.getItem('todomaster-users') || '[]');
@@ -43,6 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
       localStorage.setItem('todomaster-user', JSON.stringify(userWithoutPassword));
+      
+      // Send login notification email
+      sendEmail(
+        email,
+        "New login to your TodoMaster account",
+        `Hello ${foundUser.username},\n\nWe detected a new login to your TodoMaster account. If this was you, no action is needed. If you didn't log in, please change your password immediately.`
+      );
+      
       navigate('/dashboard');
       toast('Login successful', { description: 'Welcome back!' });
     } else {
@@ -75,8 +97,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userWithoutPassword);
     localStorage.setItem('todomaster-user', JSON.stringify(userWithoutPassword));
     
+    // Send welcome email
+    sendEmail(
+      email,
+      "Welcome to TodoMaster!",
+      `Hello ${username},\n\nThank you for creating an account with TodoMaster. We're excited to help you manage your tasks effectively.`
+    );
+    
     navigate('/dashboard');
     toast('Registration successful', { description: 'Your account has been created!' });
+  };
+
+  const requestPasswordReset = (email: string) => {
+    // In a real app, you would verify the email exists and send a reset link
+    const users = JSON.parse(localStorage.getItem('todomaster-users') || '[]');
+    const userExists = users.some((u: any) => u.email === email);
+    
+    // Only send the email if the user exists (but don't tell the user if it exists or not for security)
+    if (userExists) {
+      // Generate a "reset token" (in a real app, this would be a secure token stored in a database)
+      const resetToken = Math.random().toString(36).substring(2, 15);
+      
+      // Send password reset email
+      sendEmail(
+        email,
+        "Reset your TodoMaster password",
+        `Hello,\n\nWe received a request to reset your TodoMaster password. Use the following link to reset it:\n\n${window.location.origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}\n\nIf you didn't request this, you can safely ignore this email.`
+      );
+    }
+    
+    // Always show success message (for security reasons, don't reveal if email exists)
+    toast('Password reset email sent', { 
+      description: 'If an account with that email exists, you will receive instructions to reset your password.' 
+    });
   };
 
   const logout = () => {
@@ -87,7 +140,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, register }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated: !!user, 
+      login, 
+      logout, 
+      register, 
+      requestPasswordReset 
+    }}>
       {children}
     </AuthContext.Provider>
   );

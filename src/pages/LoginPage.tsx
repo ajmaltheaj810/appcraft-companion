@@ -57,6 +57,12 @@ const LoginPage: React.FC = () => {
                 />
               </div>
               
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              
               <Button type="submit" className="todo-button-primary mt-6">
                 Sign In
               </Button>
