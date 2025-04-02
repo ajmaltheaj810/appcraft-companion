@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Task, Priority } from '@/types';
 import { useAuth } from './AuthContext';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 type Filter = 'All' | 'Active' | 'Completed';
 type SortOrder = 'Newest' | 'Oldest' | 'Priority';
