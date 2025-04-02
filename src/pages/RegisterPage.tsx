@@ -6,7 +6,6 @@ import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { User, Mail, Lock } from 'lucide-react';
 
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -37,57 +36,42 @@ const RegisterPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="username" className="todo-label">Username</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <User size={18} />
-                  </div>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 todo-input"
-                    placeholder="Enter your username"
-                    required
-                  />
-                </div>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="todo-input"
+                  placeholder="Enter your username"
+                  required
+                />
               </div>
               
               <div>
                 <label htmlFor="email" className="todo-label">Email</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Mail size={18} />
-                  </div>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 todo-input"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="todo-input"
+                  placeholder="Enter your email"
+                  required
+                />
               </div>
               
               <div>
                 <label htmlFor="password" className="todo-label">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Lock size={18} />
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 todo-input"
-                    placeholder="Create password (min. 6 characters)"
-                    minLength={6}
-                    required
-                  />
-                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="todo-input"
+                  placeholder="Create password (min. 6 characters)"
+                  minLength={6}
+                  required
+                />
               </div>
               
               <Button type="submit" className="todo-button-primary mt-6">
